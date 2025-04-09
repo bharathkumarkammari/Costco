@@ -2,38 +2,15 @@
 <html>
 <head>
   <title>Costco Receipt Upload</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 40px;
-    }
-    h2 {
-      display: flex;
-      align-items: center;
-    }
-    h2 img {
-      margin-right: 10px;
-    }
-    button {
-      margin: 10px 0;
-    }
-    #response {
-      margin-top: 20px;
-      font-weight: bold;
-    }
-  </style>
 </head>
 <body>
-  <h2><img src="https://img.icons8.com/ios/50/receipt.png" height="40"/> Costco Receipt Upload</h2>
+  <h2>📤 Costco Receipt Upload to Google Drive</h2>
+  <button onclick="handleAuthClick()">🔐 Sign in with Google</button><br><br>
+  <input type="file" id="fileInput" accept="application/pdf" />
+  <button onclick="uploadFile()">Upload Receipt</button>
+  <div id="status" style="margin-top:20px; font-weight:bold;"></div>
 
-  <form id="uploadForm" method="POST" enctype="multipart/form-data" target="hiddenFrame"
-        action="https://script.google.com/macros/s/AKfycbzQopKf3tPaks8rNVnxOgI6PICa5ELb8gRfRJjki6C5Pqe2YpOhPbK0tBd1cEoW7kBC/exec">
-    <input type="file" name="file" required />
-    <input type="hidden" name="name" value="Costco_Receipt.pdf" />
-    <button type="submit">📤 Upload Receipt & Run</button>
-  </form>
-
-  <div id="response">✅ Uploading will automatically trigger GitHub Action</div>
-  <iframe name="hiddenFrame" style="display:none;"></iframe>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

@@ -1,64 +1,61 @@
-const driveUploadURL = "https://script.google.com/macros/s/AKfycbzfycQacF2UO0pMVH3QEcvkd0Fnw9W5y3W5LVDc8smY2kLcXLskqhI_1uNCowjRonT4/exec";
-const tokenFileID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // your GitHub PAT from Drive
+const CLIENT_ID = "99397436308-j1g6c22j42jmoa0355gsieab7cmgubjt.apps.googleusercontent.com";
+const FOLDER_ID = "1RgeXz5ubmZmI7ejjN5VJJv-Le7HnFy_y";
+const SCOPES = "https://www.googleapis.com/auth/drive.file";
+
+let tokenClient;
+let accessToken;
+
+function handleAuthClick() {
+  google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (tokenResponse) => {
+      accessToken = tokenResponse.access_token;
+      document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
+    },
+  }).requestAccessToken();
+}
 
 async function uploadFile() {
   const fileInput = document.getElementById("fileInput");
   const file = fileInput.files[0];
-  const responseBox = document.getElementById("response");
+  const status = document.getElementById("status");
 
   if (!file) {
-    responseBox.innerText = "⚠️ Please select a file to upload.";
-    responseBox.style.color = "orange";
+    status.innerText = "⚠️ Please select a file.";
+    return;
+  }
+  if (!accessToken) {
+    status.innerText = "❌ Please sign in first.";
     return;
   }
 
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("name", file.name);
+  const metadata = {
+    name: file.name,
+    parents: [FOLDER_ID],
+    mimeType: file.type
+  };
 
-  responseBox.innerText = "⏳ Uploading receipt...";
-  responseBox.style.color = "black";
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+  form.append('file', file);
+
+  status.innerText = "⏳ Uploading...";
 
   try {
-    const res = await fetch("https://script.google.com/macros/s/AKfycbzfycQacF2UO0pMVH3QEcvkd0Fnw9W5y3W5LVDc8smY2kLcXLskqhI_1uNCowjRonT4/exec", {
-      method: "POST",
-      body: formData
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+      body: form
     });
 
-    const resultText = await res.text();
-    if (res.ok && resultText.includes("✅")) {
-      responseBox.innerText = "✅ Upload successful: " + file.name;
-      responseBox.style.color = "green";
+    const result = await res.json();
+    if (res.ok) {
+      status.innerText = "✅ Upload successful. File ID: " + result.id;
     } else {
-      responseBox.innerText = "❌ Upload failed: " + resultText;
-      responseBox.style.color = "red";
+      status.innerText = "❌ Upload failed: " + (result.error?.message || res.statusText);
     }
   } catch (err) {
-    responseBox.innerText = "❌ Error: " + err.message;
-    responseBox.style.color = "red";
-  }
-}
-async function triggerAction() {
-  try {
-    const res = await fetch("https://drive.google.com/uc?export=download&id=" + tokenFileID);
-    const token = await res.text();
-
-    const ghRes = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + token.trim(),
-        "Accept": "application/vnd.github.v3+json"
-      },
-      body: JSON.stringify({ ref: "main" })
-    });
-
-    if (ghRes.ok) {
-      document.getElementById("response").innerText = "✅ GitHub Action triggered!";
-    } else {
-      const data = await ghRes.json();
-      document.getElementById("response").innerText = "❌ GitHub API Error: " + (data.message || ghRes.status);
-    }
-  } catch (err) {
-    document.getElementById("response").innerText = "❌ Error: " + err.message;
+    status.innerText = "❌ Upload error: " + err.message;
   }
 }
