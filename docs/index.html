@@ -26,20 +26,14 @@
 <body>
   <h2><img src="https://img.icons8.com/ios/50/receipt.png" height="40"/> Costco Receipt Upload</h2>
 
-  <!-- CORS-Free Upload Form -->
   <form id="uploadForm" method="POST" enctype="multipart/form-data" target="hiddenFrame"
         action="https://script.google.com/macros/s/AKfycbzfycQacF2UO0pMVH3QEcvkd0Fnw9W5y3W5LVDc8smY2kLcXLskqhI_1uNCowjRonT4/exec">
     <input type="file" name="file" required />
     <input type="hidden" name="name" value="Costco_Receipt.pdf" />
-    <button type="submit">📤 Upload Receipt</button>
+    <button type="submit">📤 Upload Receipt & Run</button>
   </form>
 
-  <!-- GitHub Action Trigger Button -->
-  <button onclick="triggerAction()">▶️ Run Extraction</button>
-
-  <div id="response"></div>
+  <div id="response">✅ Uploading will automatically trigger GitHub Action</div>
   <iframe name="hiddenFrame" style="display:none;"></iframe>
-
-  <script src="script.js"></script>
 </body>
 </html>
