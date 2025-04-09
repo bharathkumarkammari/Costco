@@ -2,17 +2,13 @@
 <html>
 <head>
   <title>Costco Parser</title>
-  <style>
-    body { font-family: sans-serif; margin: 40px; }
-    h2 { display: flex; align-items: center; }
-    h2 img { margin-right: 10px; }
-    button { margin-top: 10px; }
-  </style>
 </head>
 <body>
-  <h2><img src="https://img.icons8.com/ios/50/receipt.png" height="40"/> Costco Receipt Upload</h2>
+  <h2>🧾 Costco Receipt Upload</h2>
 
   <input type="file" id="fileInput" />
+  <button onclick="uploadFile()">📤 Upload Receipt</button>
+
   <br><br>
 
   <button onclick="triggerAction()">▶️ Run Extraction</button>
