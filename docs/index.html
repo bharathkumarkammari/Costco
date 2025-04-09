@@ -1,18 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Costco Parser</title>
+  <title>Costco Receipt Upload</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+    }
+    h2 {
+      display: flex;
+      align-items: center;
+    }
+    h2 img {
+      margin-right: 10px;
+    }
+    button {
+      margin: 10px 0;
+    }
+    #response {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <h2>🧾 Costco Receipt Upload</h2>
+  <h2><img src="https://img.icons8.com/ios/50/receipt.png" height="40"/> Costco Receipt Upload</h2>
 
-  <input type="file" id="fileInput" />
-  <button onclick="uploadFile()">📤 Upload Receipt</button>
+  <!-- CORS-Free Upload Form -->
+  <form id="uploadForm" method="POST" enctype="multipart/form-data" target="hiddenFrame"
+        action="https://script.google.com/macros/s/AKfycbzfycQacF2UO0pMVH3QEcvkd0Fnw9W5y3W5LVDc8smY2kLcXLskqhI_1uNCowjRonT4/exec">
+    <input type="file" name="file" required />
+    <input type="hidden" name="name" value="Costco_Receipt.pdf" />
+    <button type="submit">📤 Upload Receipt</button>
+  </form>
 
-  <br><br>
-
+  <!-- GitHub Action Trigger Button -->
   <button onclick="triggerAction()">▶️ Run Extraction</button>
-  <div id="response" style="margin-top: 20px; font-weight: bold;"></div>
+
+  <div id="response"></div>
+  <iframe name="hiddenFrame" style="display:none;"></iframe>
 
   <script src="script.js"></script>
 </body>
