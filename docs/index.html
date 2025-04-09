@@ -1,16 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Costco Receipt Upload</title>
+  <title>Costco Receipt Upload to Google Drive</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="script.js"></script>
+  <style>
+    body {{ font-family: Arial, sans-serif; padding: 40px; }}
+    h2 {{ display: flex; align-items: center; }}
+    h2 img {{ margin-right: 10px; }}
+    button {{ margin: 10px 0; }}
+    #status {{ margin-top: 20px; font-weight: bold; }}
+  </style>
 </head>
 <body>
   <h2>📤 Costco Receipt Upload to Google Drive</h2>
+
   <button onclick="handleAuthClick()">🔐 Sign in with Google</button><br><br>
+
   <input type="file" id="fileInput" accept="application/pdf" />
   <button onclick="uploadFile()">Upload Receipt</button>
-  <div id="status" style="margin-top:20px; font-weight:bold;"></div>
 
-  <script src="https://apis.google.com/js/api.js"></script>
-  <script src="script.js"></script>
+  <div id="status" style="color: red; font-weight: bold;"></div>
 </body>
 </html>
