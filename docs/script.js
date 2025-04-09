@@ -1,25 +1,27 @@
 async function triggerAction() {
-  const res = await fetch("https://drive.google.com/uc?export=download&id=1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow");
-  const token = await res.text();
+  try {
+    // Step 1: Download token.txt from Google Drive
+    const res = await fetch("https://drive.google.com/uc?export=download&id=1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow");
+    const token = await res.text();
 
-  fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + token.trim(),
-      "Accept": "application/vnd.github.v3+json"
-    },
-    body: JSON.stringify({ ref: "main" })
-  })
-  .then(res => {
-    if (res.ok) {
-      document.getElementById("response").innerText = "✅ GitHub Action triggered!";
+    // Step 2: Trigger GitHub Action
+    const ghRes = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + token.trim(),
+        "Accept": "application/vnd.github.v3+json"
+      },
+      body: JSON.stringify({ ref: "main" })
+    });
+
+    if (ghRes.ok) {
+      document.getElementById("response").innerText = "✅ GitHub Action triggered successfully!";
     } else {
-      res.json().then(data => {
-        document.getElementById("response").innerText = "❌ Error: " + (data.message || res.status);
-      });
+      const data = await ghRes.json();
+      document.getElementById("response").innerText = "❌ GitHub API Error: " + (data.message || ghRes.status);
     }
-  })
-  .catch(err => {
-    document.getElementById("response").innerText = "❌ Error: " + err.message;
-  });
+
+  } catch (err) {
+    document.getElementById("response").innerText = "❌ Script Error: " + err.message;
+  }
 }
