@@ -3,31 +3,41 @@ const tokenFileID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // your GitHub PAT from
 
 async function uploadFile() {
   const fileInput = document.getElementById("fileInput");
-  if (!fileInput.files.length) return alert("Please select a file first.");
-
   const file = fileInput.files[0];
-  const reader = new FileReader();
+  const responseBox = document.getElementById("response");
 
-  reader.onload = async function (e) {
-    const base64 = btoa(e.target.result);
-    const formData = new URLSearchParams();
-    formData.append("file", base64);
-    formData.append("name", file.name);
-    formData.append("type", file.type);
+  if (!file) {
+    responseBox.innerText = "⚠️ Please select a file to upload.";
+    responseBox.style.color = "orange";
+    return;
+  }
 
-    const res = await fetch(driveUploadURL, {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("name", file.name);
+
+  responseBox.innerText = "⏳ Uploading receipt...";
+  responseBox.style.color = "black";
+
+  try {
+    const res = await fetch("https://script.google.com/macros/s/AKfycbzfycQacF2UO0pMVH3QEcvkd0Fnw9W5y3W5LVDc8smY2kLcXLskqhI_1uNCowjRonT4/exec", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: formData
     });
 
     const resultText = await res.text();
-    document.getElementById("response").innerText = resultText;
-  };
-
-  reader.readAsBinaryString(file);
+    if (res.ok && resultText.includes("✅")) {
+      responseBox.innerText = "✅ Upload successful: " + file.name;
+      responseBox.style.color = "green";
+    } else {
+      responseBox.innerText = "❌ Upload failed: " + resultText;
+      responseBox.style.color = "red";
+    }
+  } catch (err) {
+    responseBox.innerText = "❌ Error: " + err.message;
+    responseBox.style.color = "red";
+  }
 }
-
 async function triggerAction() {
   try {
     const res = await fetch("https://drive.google.com/uc?export=download&id=" + tokenFileID);
