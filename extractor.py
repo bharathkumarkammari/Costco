@@ -16,12 +16,10 @@ folder_id = "1RgeXz5ubmZmI7ejjN5VJJv-Le7HnFy_y"
 creds_file_id = "1wp4xE4pzkjEGmYJpTxy3W39SetNyE9fo"
 creds_path = "creds.json"
 
-# === DOWNLOAD CREDS FROM GOOGLE DRIVE ===
-def download_creds(token):
-    print("📥 Downloading creds.json from Google Drive...")
-    headers = {"Authorization": f"Bearer {token}"}
-    url = f"https://www.googleapis.com/drive/v3/files/{creds_file_id}?alt=media"
-    r = requests.get(url, headers=headers)
+def download_creds():
+    print("📥 Downloading creds.json from Google Drive (public)...")
+    url = f"https://drive.google.com/uc?export=download&id={creds_file_id}"
+    r = requests.get(url)
     if r.status_code != 200:
         raise Exception(f"❌ Failed to download creds.json: {r.text}")
     with open(creds_path, "wb") as f:
@@ -101,8 +99,7 @@ def get_all_costco_receipts(creds_path, folder_id):
     return paths
 
 if __name__ == "__main__":
-    token = os.getenv("GDRIVE_TOKEN")
-    download_creds(token)
+    download_creds()
 
     all_pdf_files = get_all_costco_receipts(creds_path, folder_id)
     all_final_items = []
@@ -119,7 +116,7 @@ if __name__ == "__main__":
         last_item = None
 
         for line in cleaned_lines:
-            date_match = re.search(r'(\d{{2}}/\d{{2}}/\d{{4}})\s+\d{{2}}:\d{{2}}', line)
+            date_match = re.search(r'(\d{2}/\d{2}/\d{4})\s+\d{2}:\d{2}', line)
             if date_match:
                 receipt_date = datetime.strptime(date_match.group(1), '%m/%d/%Y').strftime('%Y-%m-%d')
                 break
@@ -129,26 +126,26 @@ if __name__ == "__main__":
             current_line = cleaned_lines[i]
             next_line = cleaned_lines[i + 1] if i + 1 < len(cleaned_lines) else ""
 
-            if re.match(r'^[A-Z ]{{3,}}$', current_line) and re.match(r'^(\d{{5,}})\s+([A-Z0-9]+)\s+(\d+\.\d{{2}})[NY]?', next_line):
-                match = re.match(r'^(\d{{5,}})\s+([A-Z0-9]+)\s+(\d+\.\d{{2}})', next_line)
+            if re.match(r'^[A-Z ]{3,}$', current_line) and re.match(r'^(\d{5,})\s+([A-Z0-9]+)\s+(\d+\.\d{2})[NY]?', next_line):
+                match = re.match(r'^(\d{5,})\s+([A-Z0-9]+)\s+(\d+\.\d{2})', next_line)
                 item_id, name2, price = match.groups()
-                item_name = f"{{current_line}} {{name2}}"
+                item_name = f"{current_line} {name2}"
                 cat = categorize_item(item_name)
                 final_items.append([receipt_date, item_id, item_name, cat, 1, float(price), float(price)])
-                last_item = {{"id": item_id, "name": item_name}}
+                last_item = {"id": item_id, "name": item_name}
                 i += 2
                 continue
 
-            match = re.match(r'^[EF]?\s*(\d{{5,}})\s+([A-Z0-9 /&-]+)\s+(\d+\.\d{{2}})\s*[NY]?$', current_line)
+            match = re.match(r'^[EF]?\s*(\d{5,})\s+([A-Z0-9 /&-]+)\s+(\d+\.\d{2})\s*[NY]?$', current_line)
             if match:
                 item_id, item_name, price = match.groups()
                 cat = categorize_item(item_name)
                 final_items.append([receipt_date, item_id, item_name, cat, 1, float(price), float(price)])
-                last_item = {{"id": item_id, "name": item_name}}
+                last_item = {"id": item_id, "name": item_name}
                 i += 1
                 continue
 
-            discount_match = re.search(r'(\d+\.\d{{2}})-$', current_line)
+            discount_match = re.search(r'(\d+\.\d{2})-$', current_line)
             if discount_match and last_item:
                 discount_amount = float(discount_match.group(1))
                 final_items.append([
@@ -166,13 +163,13 @@ if __name__ == "__main__":
             i += 1
 
         for line in cleaned_lines:
-            tax_match = re.match(r'^TAX\s+(\d+\.\d{{2}})$', line)
+            tax_match = re.match(r'^TAX\s+(\d+\.\d{2})$', line)
             if tax_match:
                 tax_amount = float(tax_match.group(1))
                 final_items.append([receipt_date, "TAX", "Sales Tax", "Tax", 1, tax_amount, tax_amount])
                 break
 
-        print(f"✅ Parsed {{len(final_items)}} rows from {{file_name}}")
+        print(f"✅ Parsed {len(final_items)} rows from {file_name}")
         all_final_items.extend(final_items)
 
     df = pd.DataFrame(all_final_items, columns=[
@@ -180,4 +177,4 @@ if __name__ == "__main__":
     ])
 
     export_to_google_sheet(df, google_sheet_name, creds_path)
-    print(f"✅ Extracted {{len(df)}} rows from all receipts. Exported to Google Sheets.")
+    print(f"✅ Extracted {len(df)} rows from all receipts. Exported to Google Sheets.")
