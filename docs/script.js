@@ -88,35 +88,35 @@ async function uploadFile() {
 
 async function triggerGitHubAction() {
   const status = document.getElementById("status");
-  status.innerText = "⏳ Data is extracting...";
+  status.innerText = "⚙️ Extracting data...";
 
   try {
-    // Step 1: Get GitHub token from Drive
     const tokenRes = await fetch("https://www.googleapis.com/drive/v3/files/1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow?alt=media", {
       headers: { Authorization: "Bearer " + accessToken }
     });
-    const githubToken = (await tokenRes.text()).trim();
+    const githubToken = await tokenRes.text();
 
-    // Step 2: Trigger the GitHub Action
-    const triggerRes = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
+    const res = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${githubToken}`,
+        Authorization: "Bearer " + githubToken.trim(),
         Accept: "application/vnd.github.v3+json"
       },
       body: JSON.stringify({ ref: "main" })
     });
 
-    if (!triggerRes.ok) {
-      const errData = await triggerRes.json();
-      throw new Error("Trigger failed: " + (errData.message || triggerRes.statusText));
+    if (res.ok) {
+      // Show extracting message, then success
+      status.innerText = "⚙️ Extracting data...";
+      setTimeout(() => {
+        status.innerText = "✅ Data loaded into Google Sheets!";
+      }, 30000); // 30 seconds delay
+    } else {
+      const result = await res.json();
+      status.innerText = "❌ GitHub trigger failed: " + (result.message || res.statusText);
     }
-
-    // Step 3: Poll for completion
-    await pollGitHubRunStatus(githubToken);
-    status.innerText = "✅ Data loaded into sheet!";
   } catch (err) {
-    status.innerText = "❌ GitHub error: " + err.message;
+    status.innerText = "❌ Trigger error: " + err.message;
   }
 }
 
