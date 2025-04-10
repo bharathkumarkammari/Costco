@@ -5,11 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Costco Receipt Uploader</title>
   <link rel="stylesheet" href="style.css"/>
-<!-- REMOVE these two scripts if you're not using the popup-based flow -->
-<!--
-<script src="https://apis.google.com/js/api.js" async defer></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
--->
+  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </head>
 <body>
   <div class="container">
