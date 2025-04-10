@@ -1,19 +1,17 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Costco Receipt Uploader</title>
-  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <div class="container">
-    <h1>📤 Costco Receipt Uploader v8</h1>
-    <input type="file" id="fileInput"/>
-    <button onclick="handleExtraction()">Upload & Run Extraction</button>
-    <div id="status" class="status">🕊 Waiting for action...</div>
-  </div>
+  <h1>📤 Costco Receipt Uploader</h1>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" id="fileInput" name="file" required />
+    <button type="submit">Upload & Run</button>
+  </form>
+  <div id="status">🕊 Waiting for action...</div>
   <script src="script.js"></script>
 </body>
 </html>
