@@ -1,4 +1,5 @@
-const FOLDER_ID = "1RgeXz5ubmZmI7ejjN5VJJv-Le7HnFy_y";
+const FOLDER_ID = "1wp4xE4pzkjEGmYJpTxy3W39SetNyE9fo"; // ✅ Replace with your actual folder ID
+const TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // ✅ Replace with your actual public token file ID
 
 async function handleUpload() {
   const file = document.getElementById("fileInput").files[0];
@@ -9,62 +10,59 @@ async function handleUpload() {
     return;
   }
 
-  status.innerText = "⏳ Uploading to Drive...";
-
-  const metadata = {
-    name: file.name,
-    parents: [FOLDER_ID],
-    mimeType: file.type,
-  };
-
-  const form = new FormData();
-  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-  form.append("file", file);
+  status.innerText = "📤 Uploading file to Drive...";
 
   try {
-    const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
-      method: "POST",
-      headers: new Headers({
-        Authorization: "Bearer YOUR_HARDCODED_ACCESS_TOKEN"  // ❗ Replace this
-      }),
-      body: form,
-    });
+    // 👉 STEP 1: Get GitHub token from public Google Drive file
+    const tokenRes = await fetch(`https://www.googleapis.com/drive/v3/files/${TOKEN_FILE_ID}?alt=media`);
+    const githubToken = (await tokenRes.text()).trim();
 
-    const result = await res.json();
+    // 👉 STEP 2: Upload the file using direct file upload endpoint (no Auth headers for public API)
+    const metadata = {
+      name: file.name,
+      parents: [FOLDER_ID],
+      mimeType: file.type
+    };
 
-    if (!res.ok) {
-      throw new Error(result.error?.message || res.statusText);
-    }
+    const form = new FormData();
+    form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+    form.append("file", file);
 
-    status.innerText = `✅ File uploaded. Triggering extraction...`;
-
-    await triggerGitHubAction(status);
-  } catch (err) {
-    status.innerText = `❌ Error: ${err.message}`;
-  }
-}
-
-async function triggerGitHubAction(status) {
-  try {
-    const tokenRes = await fetch("https://www.googleapis.com/drive/v3/files/1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow?alt=media");
-    const githubToken = await tokenRes.text();
-
-    const res = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
+    const uploadRes = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + githubToken.trim(),
+        Authorization: `Bearer ${githubToken}`
+      },
+      body: form
+    });
+
+    const uploadResult = await uploadRes.json();
+
+    if (!uploadRes.ok) {
+      throw new Error(uploadResult.error?.message || "Upload failed");
+    }
+
+    console.log("✅ File uploaded:", uploadResult.id);
+    status.innerText = "⚙️ Upload successful. Triggering GitHub workflow...";
+
+    // 👉 STEP 3: Trigger GitHub workflow
+    const ghRes = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github.v3+json"
       },
       body: JSON.stringify({ ref: "main" })
     });
 
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.message || res.statusText);
+    if (!ghRes.ok) {
+      const ghError = await ghRes.json();
+      throw new Error(ghError.message || "GitHub workflow failed");
     }
 
-    status.innerText = "✅ Extraction triggered! Google Sheet will update shortly.";
+    status.innerText = "✅ Workflow triggered! Data will appear shortly.";
   } catch (err) {
-    status.innerText = `❌ Trigger error: ${err.message}`;
+    console.error("❌ Error:", err);
+    document.getElementById("status").innerHTML = `❌ <b>Error:</b> ${err.message}`;
   }
 }
