@@ -1,62 +1,59 @@
-const GITHUB_TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow";
-const REPO = "bharathkumarkammari/Costco";
-const BRANCH = "main";
-const UPLOAD_FOLDER = "uploads";
+const TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // 🔐 Public GitHub token file on Google Drive
+const REPO = "bharathkumarkammari/Costco";                // ✅ Your repo
+const BRANCH = "main";                                     // 🛠️ Branch to push to
 
 async function handleExtraction() {
-  const file = document.getElementById("fileInput").files[0];
+  const fileInput = document.getElementById("fileInput");
+  const file = fileInput.files[0];
   const status = document.getElementById("status");
+
   if (!file) {
     status.innerText = "⚠️ Please select a file.";
     return;
   }
 
-  status.innerText = "⏳ Getting GitHub token...";
-  const tokenRes = await fetch(`https://www.googleapis.com/drive/v3/files/${GITHUB_TOKEN_FILE_ID}?alt=media`);
-  const token = (await tokenRes.text()).trim();
+  status.innerText = "📤 Uploading to GitHub...";
 
-  const reader = new FileReader();
-  reader.onload = async () => {
-    const content = btoa(reader.result);
-    const filename = file.name.replace(/\s+/g, "_");
-    const path = `${UPLOAD_FOLDER}/${Date.now()}_${filename}`;
+  try {
+    // Step 1: Get GitHub Token from Google Drive
+    const tokenRes = await fetch(`https://www.googleapis.com/drive/v3/files/${TOKEN_FILE_ID}?alt=media`);
+    const githubToken = (await tokenRes.text()).trim();
 
-    status.innerText = "📤 Uploading to GitHub...";
-    const uploadRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github.v3+json"
-      },
-      body: JSON.stringify({
-        message: `Upload Costco receipt ${file.name}`,
-        content,
-        branch: BRANCH
-      })
-    });
+    // Step 2: Read file content as base64
+    const reader = new FileReader();
+    reader.onload = async function () {
+      const content = reader.result.split(",")[1]; // remove base64 prefix
 
-    if (!uploadRes.ok) {
-      const err = await uploadRes.json();
-      return status.innerText = `❌ Upload failed: ${err.message}`;
-    }
+      const fileName = file.name.replace(/\s+/g, "_"); // e.g., Costco_Receipt_01-13-2025.pdf
+      const filePath = `uploads/${fileName}`;
 
-    status.innerText = "⚙️ Triggering GitHub Action...";
-    const trigger = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/run_parser.yml/dispatches`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github.v3+json"
-      },
-      body: JSON.stringify({ ref: BRANCH })
-    });
+      // Step 3: Commit the file to GitHub
+      const commitRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${filePath}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github.v3+json"
+        },
+        body: JSON.stringify({
+          message: `📥 Upload ${fileName}`,
+          content: content,
+          branch: BRANCH
+        })
+      });
 
-    if (!trigger.ok) {
-      const err = await trigger.json();
-      return status.innerText = `❌ Trigger failed: ${err.message}`;
-    }
+      const result = await commitRes.json();
 
-    status.innerText = "✅ Extraction started! Google Sheet will update shortly.";
-  };
+      if (!commitRes.ok) {
+        throw new Error(result.message || "GitHub upload failed");
+      }
 
-  reader.readAsBinaryString(file);
+      console.log("✅ File committed to GitHub:", result.content.path);
+      status.innerText = "✅ Uploaded & triggered extractor!";
+    };
+
+    reader.readAsDataURL(file); // triggers reader.onload
+  } catch (err) {
+    console.error("❌ Upload error:", err);
+    status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
+  }
 }
