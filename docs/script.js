@@ -1,68 +1,59 @@
-const FOLDER_ID = "1wp4xE4pzkjEGmYJpTxy3W39SetNyE9fo"; // ✅ Replace with your actual folder ID
-const TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // ✅ Replace with your actual public token file ID
+const GITHUB_TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // GitHub PAT in Drive
+const REPO = "bharathkumarkammari/Costco";
+const BRANCH = "main";
+const UPLOAD_FOLDER = "uploads";
 
-async function handleUpload() {
+async function uploadAndTrigger() {
   const file = document.getElementById("fileInput").files[0];
   const status = document.getElementById("status");
+  if (!file) return status.innerText = "⚠️ Please choose a PDF.";
 
-  if (!file) {
-    status.innerText = "⚠️ Please select a file.";
-    return;
-  }
+  status.innerText = "⏳ Getting GitHub token...";
+  const tokenRes = await fetch(`https://www.googleapis.com/drive/v3/files/${GITHUB_TOKEN_FILE_ID}?alt=media`);
+  const token = (await tokenRes.text()).trim();
 
-  status.innerText = "📤 Uploading file to Drive...";
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const content = btoa(reader.result);
+    const filename = file.name.replace(/\s+/g, "_");
+    const path = `${UPLOAD_FOLDER}/${Date.now()}_${filename}`;
 
-  try {
-    // 👉 STEP 1: Get GitHub token from public Google Drive file
-    const tokenRes = await fetch(`https://www.googleapis.com/drive/v3/files/${TOKEN_FILE_ID}?alt=media`);
-    const githubToken = (await tokenRes.text()).trim();
-
-    // 👉 STEP 2: Upload the file using direct file upload endpoint (no Auth headers for public API)
-    const metadata = {
-      name: file.name,
-      parents: [FOLDER_ID],
-      mimeType: file.type
-    };
-
-    const form = new FormData();
-    form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-    form.append("file", file);
-
-    const uploadRes = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
-      method: "POST",
+    status.innerText = "📤 Uploading to GitHub...";
+    const uploadRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${path}`, {
+      method: "PUT",
       headers: {
-        Authorization: `Bearer ${githubToken}`
-      },
-      body: form
-    });
-
-    const uploadResult = await uploadRes.json();
-
-    if (!uploadRes.ok) {
-      throw new Error(uploadResult.error?.message || "Upload failed");
-    }
-
-    console.log("✅ File uploaded:", uploadResult.id);
-    status.innerText = "⚙️ Upload successful. Triggering GitHub workflow...";
-
-    // 👉 STEP 3: Trigger GitHub workflow
-    const ghRes = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${githubToken}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github.v3+json"
       },
-      body: JSON.stringify({ ref: "main" })
+      body: JSON.stringify({
+        message: `Upload receipt ${file.name}`,
+        content,
+        branch: BRANCH
+      })
     });
 
-    if (!ghRes.ok) {
-      const ghError = await ghRes.json();
-      throw new Error(ghError.message || "GitHub workflow failed");
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json();
+      return status.innerText = `❌ Upload failed: ${err.message}`;
     }
 
-    status.innerText = "✅ Workflow triggered! Data will appear shortly.";
-  } catch (err) {
-    console.error("❌ Error:", err);
-    document.getElementById("status").innerHTML = `❌ <b>Error:</b> ${err.message}`;
-  }
+    status.innerText = "⚙️ Triggering GitHub Action...";
+    const trigger = await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/run_parser.yml/dispatches`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github.v3+json"
+      },
+      body: JSON.stringify({ ref: BRANCH })
+    });
+
+    if (!trigger.ok) {
+      const err = await trigger.json();
+      return status.innerText = `❌ Trigger failed: ${err.message}`;
+    }
+
+    status.innerText = "✅ Done! Receipt will be extracted into Google Sheets.";
+  };
+
+  reader.readAsBinaryString(file);
 }
