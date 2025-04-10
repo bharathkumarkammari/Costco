@@ -41,17 +41,15 @@ function authenticate() {
     return;
   }
 
-  // OPEN IN A NEW POPUP
-  tokenClient.callback = (resp) => {
-    if (resp.error) {
-      document.getElementById("status").innerText = "❌ Auth failed.";
-      return;
-    }
-    accessToken = resp.access_token;
-    document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
-  };
+function authenticate() {
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${CLIENT_ID}` +
+    `&redirect_uri=${window.location.origin}${window.location.pathname}` +
+    `&response_type=token` +
+    `&scope=${encodeURIComponent(SCOPES)}` +
+    `&prompt=consent`;
 
-  tokenClient.requestAccessToken({ prompt: "consent" });
+  window.location.href = authUrl;
 }
 
 /*function authenticate() {
@@ -165,11 +163,13 @@ async function pollGitHubRunStatus(githubToken) {
   throw new Error("Timeout: Action did not finish in time.");
 }
 
-window.addEventListener("message", (event) => {
-  if (event.data.type === "oauth-success") {
-    const hash = event.data.token;
+// 🔁 Parse token from redirect URI hash
+window.addEventListener("load", () => {
+  const hash = window.location.hash;
+  if (hash.includes("access_token")) {
     const params = new URLSearchParams(hash.substring(1));
     accessToken = params.get("access_token");
     document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
+    window.history.replaceState({}, document.title, window.location.pathname); // Clean up URL
   }
 });
