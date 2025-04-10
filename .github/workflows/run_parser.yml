@@ -1,10 +1,10 @@
-name: Parse Costco Receipt and Update Google Sheet
+name: Upload Receipt & Run Extractor
 
 on:
   workflow_dispatch:
 
 jobs:
-  extract-costco:
+  process-receipt:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,7 +17,52 @@ jobs:
           python-version: "3.10"
 
       - name: 📦 Install Dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install pdfplumber pandas gspread oauth2client google-api-python-client pydrive requests
 
-      - name: 🚀 Run Receipt Extractor
+      - name: 🔐 Download creds.json from Google Drive
+        run: curl -L "https://drive.google.com/uc?export=download&id=1wp4xE4pzkjEGmYJpTxy3W39SetNyE9fo" -o creds.json
+
+      - name: 📤 Upload latest PDF in uploads/ to Google Drive
+        env:
+          FOLDER_ID: 1RgeXz5ubmZmI7ejjN5VJJv-Le7HnFy_y
+        run: |
+          python <<EOF
+import os, glob
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+
+# Set up PyDrive with creds.json
+gauth = GoogleAuth()
+gauth.LoadCredentialsFile("creds.json")
+if not gauth.credentials:
+    gauth.LocalWebserverAuth()
+elif gauth.access_token_expired:
+    gauth.Refresh()
+else:
+    gauth.Authorize()
+
+drive = GoogleDrive(gauth)
+
+# Get the most recent uploaded PDF
+uploads = glob.glob("uploads/*.pdf")
+if not uploads:
+    raise FileNotFoundError("❌ No PDF found in uploads/")
+latest = max(uploads, key=os.path.getctime)
+
+# Upload to Google Drive folder
+file_drive = drive.CreateFile({
+    "title": os.path.basename(latest),
+    "parents": [{"id": os.getenv("FOLDER_ID")}]
+})
+file_drive.SetContentFile(latest)
+file_drive.Upload()
+print("✅ Uploaded to Drive:", latest)
+
+# Delete local copy from repo
+os.remove(latest)
+print("🗑️ Deleted from uploads folder:", latest)
+EOF
+
+      - name: 🧾 Run extractor.py
         run: python extractor.py
