@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Costco Receipt Uploader</title>
+  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
   <style>
     body {
       background-color: #f7f9fc;
@@ -63,7 +65,7 @@
   <h1>🧾 Costco Receipt Uploader</h1>
 
   <div class="btn-group">
-    <button id="signin" onclick="authenticate()" disabled>🔐 Sign in with Google</button>
+    <button id="signin" onclick="authenticate()">🔐 Sign in with Google</button>
     <button onclick="uploadFile()">📤 Upload Receipt</button>
     <button onclick="triggerGitHubAction()">⚙️ Run Extraction</button>
   </div>
