@@ -35,14 +35,32 @@ function maybeEnableSignIn() {
     document.getElementById("status").innerText = "🔓 Ready to sign in.";
   }
 }
-
 function authenticate() {
   if (!tokenClient) {
     document.getElementById("status").innerText = "⏳ Google not ready yet.";
     return;
   }
-  tokenClient.requestAccessToken();
+
+  // OPEN IN A NEW POPUP
+  tokenClient.callback = (resp) => {
+    if (resp.error) {
+      document.getElementById("status").innerText = "❌ Auth failed.";
+      return;
+    }
+    accessToken = resp.access_token;
+    document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
+  };
+
+  tokenClient.requestAccessToken({ prompt: "consent" });
 }
+
+/*function authenticate() {
+  if (!tokenClient) {
+    document.getElementById("status").innerText = "⏳ Google not ready yet.";
+    return;
+  }
+  tokenClient.requestAccessToken();
+}*/
 
 async function uploadFile() {
   const file = document.getElementById("fileInput").files[0];
