@@ -1,26 +1,23 @@
-name: Run Costco Receipt Extractor
+name: Parse Costco Receipt and Update Google Sheet
 
 on:
   workflow_dispatch:
 
 jobs:
-  extract:
+  extract-costco:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: 📦 Install Dependencies
+        run: pip install -r requirements.txt
 
-    - name: Run extractor
-      run: |
-        python extractor.py
+      - name: 🚀 Run Receipt Extractor
+        run: python extractor.py
