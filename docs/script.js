@@ -1,12 +1,15 @@
-const GITHUB_TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // GitHub PAT in Drive
+const GITHUB_TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow";
 const REPO = "bharathkumarkammari/Costco";
 const BRANCH = "main";
 const UPLOAD_FOLDER = "uploads";
 
-async function uploadAndTrigger() {
+async function handleExtraction() {
   const file = document.getElementById("fileInput").files[0];
   const status = document.getElementById("status");
-  if (!file) return status.innerText = "⚠️ Please choose a PDF.";
+  if (!file) {
+    status.innerText = "⚠️ Please select a file.";
+    return;
+  }
 
   status.innerText = "⏳ Getting GitHub token...";
   const tokenRes = await fetch(`https://www.googleapis.com/drive/v3/files/${GITHUB_TOKEN_FILE_ID}?alt=media`);
@@ -26,7 +29,7 @@ async function uploadAndTrigger() {
         Accept: "application/vnd.github.v3+json"
       },
       body: JSON.stringify({
-        message: `Upload receipt ${file.name}`,
+        message: `Upload Costco receipt ${file.name}`,
         content,
         branch: BRANCH
       })
@@ -52,7 +55,7 @@ async function uploadAndTrigger() {
       return status.innerText = `❌ Trigger failed: ${err.message}`;
     }
 
-    status.innerText = "✅ Done! Receipt will be extracted into Google Sheets.";
+    status.innerText = "✅ Extraction started! Google Sheet will update shortly.";
   };
 
   reader.readAsBinaryString(file);
