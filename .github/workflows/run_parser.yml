@@ -1,14 +1,13 @@
-name: Parse Costco Receipt and Update Google Sheet
+name: Run Costco Receipt Extractor
 
 on:
   workflow_dispatch:
 
 jobs:
-  extract-costco:
+  extract:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout repo
         uses: actions/checkout@v3
 
       - name: 🐍 Set up Python
@@ -16,8 +15,44 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: 📦 Install Dependencies
-        run: pip install -r requirements.txt
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pdfplumber pandas gspread oauth2client google-api-python-client
 
-      - name: 🚀 Run Receipt Extractor
+      - name: 🔑 Download creds.json from Google Drive
+        run: |
+          curl -L "https://drive.google.com/uc?export=download&id=1wp4xE4pzkjEGmYJpTxy3W39SetNyE9fo" -o creds.json
+
+      - name: 📤 Upload latest PDF in uploads/ to Google Drive
+        env:
+          CREDS_PATH: creds.json
+          FOLDER_ID: 1RgeXz5ubmZmI7ejjN5VJJv-Le7HnFy_y
+        run: |
+          python <<EOF
+          import os, json, glob
+          from pydrive.auth import GoogleAuth
+          from pydrive.drive import GoogleDrive
+
+          os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.getenv('CREDS_PATH')
+
+          gauth = GoogleAuth()
+          gauth.LoadCredentialsFile(os.getenv('CREDS_PATH'))
+          if not gauth.credentials:
+              gauth.LocalWebserverAuth()
+          elif gauth.access_token_expired:
+              gauth.Refresh()
+          else:
+              gauth.Authorize()
+
+          drive = GoogleDrive(gauth)
+          latest_file = max(glob.glob("uploads/*.pdf"), key=os.path.getctime)
+
+          file_drive = drive.CreateFile({"parents": [{"id": os.getenv("FOLDER_ID")}], "title": os.path.basename(latest_file)})
+          file_drive.SetContentFile(latest_file)
+          file_drive.Upload()
+          print("✅ Uploaded:", latest_file)
+          EOF
+
+      - name: 🧾 Run extractor.py
         run: python extractor.py
