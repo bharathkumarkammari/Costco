@@ -1,11 +1,6 @@
-const TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // 🔐 Public GitHub token file on Google Drive
-const REPO = "bharathkumarkammari/Costco";                // ✅ Your repo
-const BRANCH = "main";                                     // 🛠️ Branch to push to
-
 async function handleExtraction() {
-  const fileInput = document.getElementById("fileInput");
-  const file = fileInput.files[0];
   const status = document.getElementById("status");
+  const file = document.getElementById("fileInput").files[0];
 
   if (!file) {
     status.innerText = "⚠️ Please select a file.";
@@ -13,47 +8,32 @@ async function handleExtraction() {
   }
 
   status.innerText = "📤 Uploading to GitHub...";
-
+  
   try {
-    // Step 1: Get GitHub Token from Google Drive
-    const tokenRes = await fetch("https://drive.google.com/uc?export=download&id=1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow");
-    const githubToken = (await tokenRes.text()).trim();
+    const formData = new FormData();
+    formData.append("file", file);
 
-    // Step 2: Read file content as base64
-    const reader = new FileReader();
-    reader.onload = async function () {
-      const content = reader.result.split(",")[1]; // remove base64 prefix
+    // Upload to GitHub backend endpoint (must support CORS)
+    const res = await fetch("https://your-backend-endpoint/upload", {
+      method: "POST",
+      body: formData
+    });
 
-      const fileName = file.name.replace(/\s+/g, "_"); // e.g., Costco_Receipt_01-13-2025.pdf
-      const filePath = `uploads/${fileName}`;
+    if (!res.ok) throw new Error("Upload failed");
 
-      // Step 3: Commit the file to GitHub
-      const commitRes = await fetch(`https://api.github.com/repos/${REPO}/contents/${filePath}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${githubToken}`,
-          Accept: "application/vnd.github.v3+json"
-        },
-        body: JSON.stringify({
-          message: `📥 Upload ${fileName}`,
-          content: content,
-          branch: BRANCH
-        })
-      });
+    // Trigger GitHub Action
+    await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer YOUR_GITHUB_PAT",
+        Accept: "application/vnd.github.v3+json"
+      },
+      body: JSON.stringify({ ref: "main" })
+    });
 
-      const result = await commitRes.json();
-
-      if (!commitRes.ok) {
-        throw new Error(result.message || "GitHub upload failed");
-      }
-
-      console.log("✅ File committed to GitHub:", result.content.path);
-      status.innerText = "✅ Uploaded & triggered extractor!";
-    };
-
-    reader.readAsDataURL(file); // triggers reader.onload
+    status.innerText = "✅ Workflow triggered successfully!";
   } catch (err) {
-    console.error("❌ Upload error:", err);
+    console.error("Upload error:", err);
     status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
   }
 }
