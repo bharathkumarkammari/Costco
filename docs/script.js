@@ -1,40 +1,8 @@
 const CLIENT_ID = "99397436308-j1g6c22j42jmoa0355gsieab7cmgubjt.apps.googleusercontent.com";
-const API_KEY = "AIzaSyAsYIv9OQPDiwTVEYOY2PnFY6ldsaTjtD4";
 const FOLDER_ID = "1RgeXz5ubmZmI7ejjN5VJJv-Le7HnFy_y";
 const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
 
-let tokenClient;
 let accessToken = null;
-let gapiReady = false;
-let gisReady = false;
-
-function gapiLoaded() {
-  gapi.load('client', async () => {
-    await gapi.client.init({ apiKey: API_KEY });
-    gapiReady = true;
-    maybeEnableSignIn();
-  });
-}
-
-function gisLoaded() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
-    callback: (tokenResponse) => {
-      accessToken = tokenResponse.access_token;
-      document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
-    },
-  });
-  gisReady = true;
-  maybeEnableSignIn();
-}
-
-function maybeEnableSignIn() {
-  if (gapiReady && gisReady) {
-    document.getElementById("signin").disabled = false;
-    document.getElementById("status").innerText = "🔓 Ready to sign in.";
-  }
-}
 
 function authenticate() {
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -46,13 +14,19 @@ function authenticate() {
 
   window.location.href = authUrl;
 }
-/*function authenticate() {
-  if (!tokenClient) {
-    document.getElementById("status").innerText = "⏳ Google not ready yet.";
-    return;
+
+// Parse token from redirect URI
+window.addEventListener("load", () => {
+  const hash = window.location.hash;
+  if (hash.includes("access_token")) {
+    const params = new URLSearchParams(hash.substring(1));
+    accessToken = params.get("access_token");
+    document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
+    window.history.replaceState({}, document.title, window.location.pathname); // Clean up URL
+  } else {
+    document.getElementById("status").innerText = "🔓 Please sign in.";
   }
-  tokenClient.requestAccessToken();
-}*/
+});
 
 async function uploadFile() {
   const file = document.getElementById("fileInput").files[0];
@@ -116,11 +90,10 @@ async function triggerGitHubAction() {
     });
 
     if (res.ok) {
-      // Show extracting message, then success
       status.innerText = "⚙️ Extracting data...";
       setTimeout(() => {
         status.innerText = "✅ Data loaded into Google Sheets!";
-      }, 30000); // 30 seconds delay
+      }, 30000);
     } else {
       const result = await res.json();
       status.innerText = "❌ GitHub trigger failed: " + (result.message || res.statusText);
@@ -129,41 +102,3 @@ async function triggerGitHubAction() {
     status.innerText = "❌ Trigger error: " + err.message;
   }
 }
-
-async function pollGitHubRunStatus(githubToken) {
-  const runUrl = "https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/runs?per_page=1";
-
-  for (let i = 0; i < 30; i++) {
-    const res = await fetch(runUrl, {
-      headers: {
-        Authorization: `Bearer ${githubToken}`,
-        Accept: "application/vnd.github.v3+json"
-      }
-    });
-    const data = await res.json();
-    const latest = data.workflow_runs[0];
-
-    if (latest.status === "completed") {
-      if (latest.conclusion === "success") {
-        return;
-      } else {
-        throw new Error("Action failed: " + latest.conclusion);
-      }
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 10000)); // wait 10 seconds
-  }
-
-  throw new Error("Timeout: Action did not finish in time.");
-}
-
-// 🔁 Parse token from redirect URI hash
-window.addEventListener("load", () => {
-  const hash = window.location.hash;
-  if (hash.includes("access_token")) {
-    const params = new URLSearchParams(hash.substring(1));
-    accessToken = params.get("access_token");
-    document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
-    window.history.replaceState({}, document.title, window.location.pathname); // Clean up URL
-  }
-});
