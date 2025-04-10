@@ -1,10 +1,9 @@
 name: Run Receipt Extractor
 
 on:
-  workflow_dispatch:  # Allows you to trigger from UI or API
   push:
     paths:
-      - 'uploads/**'   # Triggers automatically when files are pushed to uploads/
+      - 'uploads/**'
 
 jobs:
   extract:
@@ -24,8 +23,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 📁 Create tmp directory
-        run: mkdir -p /tmp
-
       - name: 🚀 Run extractor script
         run: python extractor.py
+
+      - name: 🧹 Delete uploaded file from uploads/
+        run: |
+          FILE=$(ls uploads | head -n 1)
+          git rm uploads/$FILE
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git commit -m "🧹 Remove processed file $FILE"
+          git push
