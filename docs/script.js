@@ -164,3 +164,12 @@ async function pollGitHubRunStatus(githubToken) {
 
   throw new Error("Timeout: Action did not finish in time.");
 }
+
+window.addEventListener("message", (event) => {
+  if (event.data.type === "oauth-success") {
+    const hash = event.data.token;
+    const params = new URLSearchParams(hash.substring(1));
+    accessToken = params.get("access_token");
+    document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
+  }
+});
