@@ -35,11 +35,6 @@ function maybeEnableSignIn() {
     document.getElementById("status").innerText = "🔓 Ready to sign in.";
   }
 }
-function authenticate() {
-  if (!tokenClient) {
-    document.getElementById("status").innerText = "⏳ Google not ready yet.";
-    return;
-  }
 
 function authenticate() {
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -51,7 +46,6 @@ function authenticate() {
 
   window.location.href = authUrl;
 }
-
 /*function authenticate() {
   if (!tokenClient) {
     document.getElementById("status").innerText = "⏳ Google not ready yet.";
