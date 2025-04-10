@@ -5,28 +5,37 @@ const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
 let tokenClient;
 let accessToken = null;
-let gapiInited = false;
+let gapiLoaded = false;
 
-function authenticate() {
+function gapiLoadedCallback() {
   gapi.load('client', async () => {
     await gapi.client.init({ apiKey: API_KEY });
-    gapiInited = true;
-
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: (tokenResponse) => {
-        accessToken = tokenResponse.access_token;
-        document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
-      },
-    });
-    tokenClient.requestAccessToken();
+    gapiLoaded = true;
+    document.getElementById("status").innerText = "✅ Google API ready. Now sign in.";
   });
 }
 
+function gisLoadedCallback() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (tokenResponse) => {
+      accessToken = tokenResponse.access_token;
+      document.getElementById("status").innerText = "✅ Signed in. Ready to upload.";
+    },
+  });
+}
+
+function authenticate() {
+  if (!gapiLoaded || !tokenClient) {
+    document.getElementById("status").innerText = "⏳ Please wait... still loading Google API.";
+    return;
+  }
+  tokenClient.requestAccessToken();
+}
+
 async function uploadFile() {
-  const fileInput = document.getElementById("fileInput");
-  const file = fileInput.files[0];
+  const file = document.getElementById("fileInput").files[0];
   const status = document.getElementById("status");
 
   if (!file) {
@@ -41,27 +50,26 @@ async function uploadFile() {
   const metadata = {
     name: file.name,
     parents: [FOLDER_ID],
-    mimeType: file.type
+    mimeType: file.type,
   };
 
   const form = new FormData();
-  form.append("metadata", new Blob([JSON.stringify(metadata)], {type: "application/json"}));
-  form.append("file", file);
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', file);
+
+  status.innerText = "⏳ Uploading...";
 
   try {
-    const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id", {
-      method: "POST",
-      headers: new Headers({
-        "Authorization": "Bearer " + accessToken
-      }),
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
       body: form
     });
-
-    const result = await response.json();
-    if (response.ok) {
-      status.innerText = "✅ File uploaded! File ID: " + result.id;
+    const result = await res.json();
+    if (res.ok) {
+      status.innerText = "✅ Upload successful! File ID: " + result.id;
     } else {
-      status.innerText = "❌ Upload failed: " + (result.error?.message || response.statusText);
+      status.innerText = "❌ Upload failed: " + (result.error?.message || res.statusText);
     }
   } catch (err) {
     status.innerText = "❌ Upload error: " + err.message;
