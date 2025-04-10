@@ -1,16 +1,13 @@
-.container {
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f5f7fa;
   text-align: center;
-  margin-top: 80px;
-  font-family: sans-serif;
+  padding-top: 60px;
 }
-button {
-  padding: 10px 20px;
-  margin: 10px;
-  font-size: 16px;
-  background-color: #3b5bfe;
-  color: white;
-  border: none;
-  border-radius: 6px;
+.container {
+  max-width: 600px;
+  margin: auto;
 }
 .status {
   margin-top: 20px;
