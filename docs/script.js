@@ -16,7 +16,7 @@ async function handleExtraction() {
 
   try {
     // Step 1: Get GitHub Token from Google Drive
-    const tokenRes = await fetch(`https://www.googleapis.com/drive/v3/files/${TOKEN_FILE_ID}?alt=media`);
+    const tokenRes = await fetch("https://drive.google.com/uc?export=download&id=1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow");
     const githubToken = (await tokenRes.text()).trim();
 
     // Step 2: Read file content as base64
