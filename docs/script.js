@@ -54,3 +54,4 @@ function toBase64(file) {
     reader.onerror = reject;
   });
 }
+//we1
