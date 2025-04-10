@@ -1,29 +1,20 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Costco Receipt Uploader</title>
-  <link rel="stylesheet" href="style.css"/>
-  <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()" async defer></script>
-  <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <h1>🧾 Costco Receipt Uploader</h1>
+    <h1>📤 Costco Receipt Uploader</h1>
 
-    <div class="button-row">
-      <button id="signin" onclick="authenticate()">🔐 Sign in with Google</button>
-      <button onclick="uploadFile()">📤 Upload Receipt</button>
-      <button onclick="triggerGitHubAction()">⚙️ Run Extraction</button>
-    </div>
+    <input type="file" id="fileInput" accept="application/pdf" />
+    <br/><br/>
+    <button onclick="uploadAndRun()">Upload & Run Extraction</button>
 
-    <div class="file-upload">
-      <input type="file" id="fileInput"/>
-      <label for="fileInput">Choose File</label>
-    </div>
-
-    <div id="status" class="status">🔓 Please sign in.</div>
+    <div id="status" class="status">Please select a receipt and click the button.</div>
   </div>
 
   <script src="script.js"></script>
