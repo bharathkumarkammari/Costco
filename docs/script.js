@@ -88,30 +88,61 @@ async function uploadFile() {
 
 async function triggerGitHubAction() {
   const status = document.getElementById("status");
-  status.innerText = "⚙️ Triggering GitHub Action...";
+  status.innerText = "⏳ Data is extracting...";
 
   try {
+    // Step 1: Get GitHub token from Drive
     const tokenRes = await fetch("https://www.googleapis.com/drive/v3/files/1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow?alt=media", {
       headers: { Authorization: "Bearer " + accessToken }
     });
-    const githubToken = await tokenRes.text();
+    const githubToken = (await tokenRes.text()).trim();
 
-    const res = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
+    // Step 2: Trigger the GitHub Action
+    const triggerRes = await fetch("https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/dispatches", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + githubToken.trim(),
+        Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github.v3+json"
       },
       body: JSON.stringify({ ref: "main" })
     });
 
-    if (res.ok) {
-      status.innerText = "✅ GitHub Action triggered successfully!";
-    } else {
-      const result = await res.json();
-      status.innerText = "❌ GitHub trigger failed: " + (result.message || res.statusText);
+    if (!triggerRes.ok) {
+      const errData = await triggerRes.json();
+      throw new Error("Trigger failed: " + (errData.message || triggerRes.statusText));
     }
+
+    // Step 3: Poll for completion
+    await pollGitHubRunStatus(githubToken);
+    status.innerText = "✅ Data loaded into sheet!";
   } catch (err) {
-    status.innerText = "❌ Trigger error: " + err.message;
+    status.innerText = "❌ GitHub error: " + err.message;
   }
+}
+
+async function pollGitHubRunStatus(githubToken) {
+  const runUrl = "https://api.github.com/repos/bharathkumarkammari/Costco/actions/workflows/run_parser.yml/runs?per_page=1";
+
+  for (let i = 0; i < 30; i++) {
+    const res = await fetch(runUrl, {
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: "application/vnd.github.v3+json"
+      }
+    });
+    const data = await res.json();
+    const latest = data.workflow_runs[0];
+
+    if (latest.status === "completed") {
+      if (latest.conclusion === "success") {
+        return;
+      } else {
+        throw new Error("Action failed: " + latest.conclusion);
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 10000)); // wait 10 seconds
+  }
+
+  throw new Error("Timeout: Action did not finish in time.");
 }
