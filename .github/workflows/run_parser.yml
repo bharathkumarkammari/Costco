@@ -1,7 +1,10 @@
 name: Run Receipt Extractor
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Allows you to trigger from UI or API
+  push:
+    paths:
+      - 'uploads/**'   # Triggers automatically when files are pushed to uploads/
 
 jobs:
   extract:
