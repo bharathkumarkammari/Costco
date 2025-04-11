@@ -1,15 +1,29 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Costco Uploader4</title>
+  <title>Upload Receipt to Google Drive</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    input[type="file"] {
+      margin-bottom: 1rem;
+    }
+  </style>
 </head>
 <body>
-  <h2>📄 Upload Receipt to GitHub3</h2>
-  <input type="file" id="fileInput" />
-  <button onclick="uploadToGoogleAppsScript()">📤 Upload</button>
-  <div id="status">📂 Waiting for file...</div>
-  <script src="script.js"></script>
+
+  <h1>📤 Costco Receipt Uploader</h1>
+
+  <form action="https://script.google.com/macros/s/AKfycbz9te29_-0yBXyynWkl7qSSTPLmUmv5uE8eJdL4C9t-z957WLmlcA_kudgq6xuDPNmq/exec" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" required />
+    <br />
+    <button type="submit">Upload Receipt</button>
+  </form>
+
+  <p>You’ll see a Drive success message after upload ✅</p>
+
 </body>
 </html>
