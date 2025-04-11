@@ -1,9 +1,8 @@
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9te29_-0yBXyynWkl7qSSTPLmUmv5uE8eJdL4C9t-z957WLmlcA_kudgq6xuDPNmq/exec"; // replace after deployment
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9te29_-0yBXyynWkl7qSSTPLmUmv5uE8eJdL4C9t-z957WLmlcA_kudgq6xuDPNmq/exec";
 
 async function uploadToGoogleAppsScript() {
-  const fileInput = document.getElementById("fileInput");
+  const file = document.getElementById("fileInput").files[0];
   const status = document.getElementById("status");
-  const file = fileInput.files[0];
 
   if (!file) {
     status.innerText = "⚠️ Please select a file.";
@@ -12,18 +11,26 @@ async function uploadToGoogleAppsScript() {
 
   status.innerText = "📤 Uploading to Google Drive...";
 
-  const form = new FormData();
-  form.append("file", file, file.name);
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const base64 = reader.result.split(',')[1];
 
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: form,
-    });
+    const params = new URLSearchParams();
+    params.append("content", base64);
+    params.append("mimeType", file.type);
+    params.append("name", file.name);
 
-    const text = await res.text();
-    status.innerText = text.includes("✅") ? text : "❌ Upload failed.";
-  } catch (err) {
-    status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
-  }
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        body: params
+      });
+      const text = await res.text();
+      status.innerText = text;
+    } catch (err) {
+      status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
+    }
+  };
+
+  reader.readAsDataURL(file);
 }
