@@ -1,7 +1,6 @@
-const GITHUB_REPO = "bharathkumarkammari/Costco";
-const BRANCH = "main";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQopKf3tPaks8rNVnxOgI6PICa5ELb8gRfRJjki6C5Pqe2YpOhPbK0tBd1cEoW7kBC/exec"; // replace after deployment
 
-async function uploadToGitHub() {
+async function uploadToGoogleAppsScript() {
   const fileInput = document.getElementById("fileInput");
   const status = document.getElementById("status");
   const file = fileInput.files[0];
@@ -11,37 +10,20 @@ async function uploadToGitHub() {
     return;
   }
 
-  status.innerText = "📤 Uploading to GitHub...";
+  status.innerText = "📤 Uploading to Google Drive...";
+
+  const form = new FormData();
+  form.append("file", file, file.name);
 
   try {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64Content = reader.result.split(",")[1];
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: form,
+    });
 
-      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/uploads/${encodeURIComponent(file.name)}`, {
-        method: "PUT",
-        headers: {
-          Accept: "application/vnd.github.v3+json"
-        },
-        body: JSON.stringify({
-          message: `📄 Upload receipt ${file.name}`,
-          content: base64Content,
-          branch: BRANCH
-        })
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        throw new Error(result.message || "Upload failed");
-      }
-
-      status.innerText = "✅ File uploaded to GitHub! GitHub Action triggered.";
-    };
-
-    reader.readAsDataURL(file);
+    const text = await res.text();
+    status.innerText = text.includes("✅") ? text : "❌ Upload failed.";
   } catch (err) {
-    console.error(err);
     status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
   }
 }
