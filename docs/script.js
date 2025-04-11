@@ -1,6 +1,9 @@
 const GITHUB_REPO = "bharathkumarkammari/Costco";
 const BRANCH = "main";
-const TOKEN_URL = "https://raw.githubusercontent.com/bharathkumarkammari/Costco/main/docs/token.txt";
+const FILE_UPLOAD_PATH = "uploads";
+
+// Optional: for local dev testing only (you can inject this in browser console)
+const TEST_GITHUB_TOKEN = ""; // e.g., "ghp_abc123..." (do NOT hardcode in production)
 
 async function uploadToGitHub() {
   const fileInput = document.getElementById("fileInput");
@@ -12,39 +15,37 @@ async function uploadToGitHub() {
     return;
   }
 
-  status.innerText = "📥 Fetching token...";
+  status.innerText = "📤 Uploading to GitHub...";
 
   try {
-    // Step 1: Fetch and decode token (only once)
-    const tokenRes = await fetch(TOKEN_URL);
-    if (!tokenRes.ok) throw new Error("Failed to fetch GitHub token.");
-    const githubToken = atob((await tokenRes.text()).trim());
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const content = reader.result.split(',')[1]; // Extract base64
 
-    // Step 2: Convert file to base64
-    const arrayBuffer = await file.arrayBuffer();
-    const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_UPLOAD_PATH}/${encodeURIComponent(file.name)}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${TEST_GITHUB_TOKEN}`,
+          Accept: "application/vnd.github.v3+json"
+        },
+        body: JSON.stringify({
+          message: `📄 Upload receipt ${file.name}`,
+          content: content,
+          branch: BRANCH
+        })
+      });
 
-    // Step 3: Upload to GitHub
-    const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/uploads/${encodeURIComponent(file.name)}`;
-    status.innerText = "📤 Uploading to GitHub...";
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message || "Upload failed");
 
-    const res = await fetch(apiUrl, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${githubToken}`,
-        Accept: "application/vnd.github.v3+json"
-      },
-      body: JSON.stringify({
-        message: `📄 Upload receipt ${file.name}`,
-        content: base64Content,
-        branch: BRANCH
-      })
-    });
+      status.innerText = "✅ File uploaded to GitHub! Triggered GitHub Action.";
+    };
 
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.message || "Upload failed");
+    reader.onerror = () => {
+      status.innerText = "❌ Failed to read file.";
+    };
 
-    status.innerText = `✅ File uploaded to GitHub!\nSHA: ${result.content.sha}`;
+    reader.readAsDataURL(file);
   } catch (err) {
     console.error(err);
     status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
