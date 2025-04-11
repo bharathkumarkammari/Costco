@@ -1,6 +1,6 @@
 const GITHUB_REPO = "bharathkumarkammari/Costco";
 const BRANCH = "main";
-const TOKEN_FILE_ID = "1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"; // base64 token.txt
+const TOKEN_URL = "https://raw.githubusercontent.com/bharathkumarkammari/Costco/main/docs/token.txt";
 
 async function uploadToGitHub() {
   const fileInput = document.getElementById("fileInput");
@@ -15,26 +15,23 @@ async function uploadToGitHub() {
   status.innerText = "📥 Fetching token...";
 
   try {
-    // Step 1: Get Base64-encoded token from Drive
-    const tokenRes = await fetch("https://raw.githubusercontent.com/bharathkumarkammari/Costco/main/docs/token.txt");
-    const githubToken = (await tokenRes.text()).trim();
-    if (!tokenRes.ok) throw new Error("❌ Failed to fetch token from Drive");
-    const base64Token = (await tokenRes.text()).trim();
+    // Step 1: Fetch and decode token (only once)
+    const tokenRes = await fetch(TOKEN_URL);
+    if (!tokenRes.ok) throw new Error("Failed to fetch GitHub token.");
+    const githubToken = atob((await tokenRes.text()).trim());
 
-    // Step 2: Decode token
-    const decodedToken = atob(base64Token);
-
-    // Step 3: Convert file to base64
+    // Step 2: Convert file to base64
     const arrayBuffer = await file.arrayBuffer();
     const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
-    // Step 4: Upload to GitHub
-    status.innerText = "📤 Uploading to GitHub...";
+    // Step 3: Upload to GitHub
     const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/uploads/${encodeURIComponent(file.name)}`;
-    const uploadRes = await fetch(apiUrl, {
+    status.innerText = "📤 Uploading to GitHub...";
+
+    const res = await fetch(apiUrl, {
       method: "PUT",
       headers: {
-        Authorization: `Bearer ${decodedToken}`,
+        Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github.v3+json"
       },
       body: JSON.stringify({
@@ -44,10 +41,10 @@ async function uploadToGitHub() {
       })
     });
 
-    const result = await uploadRes.json();
-    if (!uploadRes.ok) throw new Error(result.message || "Upload failed");
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || "Upload failed");
 
-    status.innerText = `✅ File uploaded to GitHub! File ID: ${result.content.sha}`;
+    status.innerText = `✅ File uploaded to GitHub!\nSHA: ${result.content.sha}`;
   } catch (err) {
     console.error(err);
     status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
