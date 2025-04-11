@@ -16,21 +16,32 @@ jobs:
       - name: 🐍 Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.10
+          python-version: '3.10'
 
-      - name: 🧰 Install dependencies
+      - name: 🔐 Configure Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+      - name: 📦 Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 🚀 Run extractor script
+      - name: 📁 Upload to Google Drive and Run Extractor
         run: python extractor.py
 
-      - name: 🧹 Delete uploaded file from uploads/
+      - name: 🧹 Delete uploaded file from GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           FILE=$(ls uploads | head -n 1)
-          git rm uploads/$FILE
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git commit -m "🧹 Remove processed file $FILE"
-          git push
+          SHA=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/contents/uploads/$FILE \
+            | jq -r .sha)
+
+          curl -X DELETE \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/contents/uploads/$FILE \
+            -d "{\"message\":\"🧹 Delete uploaded file\",\"sha\":\"$SHA\"}"
