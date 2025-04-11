@@ -16,10 +16,9 @@ async function uploadToGitHub() {
 
   try {
     // ✅ Step 1: Get GitHub token from Google Drive (via CORS proxy)
-    const proxyUrl = `https://corsproxy.io/?https://drive.google.com/uc?export=download&id=${TOKEN_FILE_ID}`;
-    const tokenRes = await fetch(proxyUrl);
-    if (!tokenRes.ok) throw new Error("❌ Failed to fetch token from Drive");
-    const githubToken = (await tokenRes.text()).trim();
+    const raw = await fetch("https://raw.githubusercontent.com/bharathkumarkammari/Costco/main/docs/token.txt");
+	const base64 = (await raw.text()).trim();
+	const githubToken = atob(base64); // ⬅️ decode back
 
     // ✅ Step 2: Convert file to base64
     const content = await file.arrayBuffer();
