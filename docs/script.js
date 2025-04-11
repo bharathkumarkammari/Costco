@@ -16,7 +16,8 @@ async function uploadToGitHub() {
 
   try {
     // Step 1: Get Base64-encoded token from Drive
-    const tokenRes = await fetch(`https://corsproxy.io/?https://drive.google.com/uc?export=download&id=${TOKEN_FILE_ID}`);
+    const tokenRes = await fetch("https://raw.githubusercontent.com/bharathkumarkammari/Costco/main/docs/token.txt");
+    const githubToken = (await tokenRes.text()).trim();
     if (!tokenRes.ok) throw new Error("❌ Failed to fetch token from Drive");
     const base64Token = (await tokenRes.text()).trim();
 
