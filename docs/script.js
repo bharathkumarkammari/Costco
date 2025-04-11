@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQopKf3tPaks8rNVnxOgI6PICa5ELb8gRfRJjki6C5Pqe2YpOhPbK0tBd1cEoW7kBC/exec"; // replace after deployment
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9te29_-0yBXyynWkl7qSSTPLmUmv5uE8eJdL4C9t-z957WLmlcA_kudgq6xuDPNmq/exec"; // replace after deployment
 
 async function uploadToGoogleAppsScript() {
   const fileInput = document.getElementById("fileInput");
