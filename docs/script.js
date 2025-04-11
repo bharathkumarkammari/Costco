@@ -1,9 +1,5 @@
 const GITHUB_REPO = "bharathkumarkammari/Costco";
 const BRANCH = "main";
-const FILE_UPLOAD_PATH = "uploads";
-
-// Optional: for local dev testing only (you can inject this in browser console)
-const TEST_GITHUB_TOKEN = ""; // e.g., "ghp_abc123..." (do NOT hardcode in production)
 
 async function uploadToGitHub() {
   const fileInput = document.getElementById("fileInput");
@@ -20,29 +16,27 @@ async function uploadToGitHub() {
   try {
     const reader = new FileReader();
     reader.onload = async () => {
-      const content = reader.result.split(',')[1]; // Extract base64
+      const base64Content = reader.result.split(",")[1];
 
-      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_UPLOAD_PATH}/${encodeURIComponent(file.name)}`, {
+      const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/uploads/${encodeURIComponent(file.name)}`, {
         method: "PUT",
         headers: {
-          Authorization: `Bearer ${TEST_GITHUB_TOKEN}`,
           Accept: "application/vnd.github.v3+json"
         },
         body: JSON.stringify({
           message: `📄 Upload receipt ${file.name}`,
-          content: content,
+          content: base64Content,
           branch: BRANCH
         })
       });
 
       const result = await res.json();
-      if (!res.ok) throw new Error(result.message || "Upload failed");
 
-      status.innerText = "✅ File uploaded to GitHub! Triggered GitHub Action.";
-    };
+      if (!res.ok) {
+        throw new Error(result.message || "Upload failed");
+      }
 
-    reader.onerror = () => {
-      status.innerText = "❌ Failed to read file.";
+      status.innerText = "✅ File uploaded to GitHub! GitHub Action triggered.";
     };
 
     reader.readAsDataURL(file);
