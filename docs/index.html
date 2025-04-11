@@ -1,17 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Costco Receipt Uploader</title>
+  <meta charset="UTF-8">
+  <title>Costco Uploader</title>
 </head>
 <body>
-  <h1>📤 Costco Receipt Uploader</h1>
-  <form id="uploadForm" enctype="multipart/form-data">
-    <input type="file" id="fileInput" name="file" required />
-    <button type="submit">Upload & Run</button>
-  </form>
-  <div id="status">🕊 Waiting for action...</div>
+  <h2>📄 Upload Receipt to GitHub</h2>
+  <input type="file" id="fileInput">
+  <button onclick="uploadToGitHub()">Upload</button>
+  <div id="status">🕊 Waiting for upload...</div>
   <script src="script.js"></script>
 </body>
 </html>
