@@ -15,24 +15,19 @@ async function uploadToGitHub() {
   status.innerText = "📤 Uploading file to GitHub...";
 
   try {
-    // Step 1: Fetch GitHub token from public Google Drive
-    const tokenRes = await fetch(`https://drive.google.com/uc?export=download&id=${TOKEN_FILE_ID}`);
-    if (!tokenRes.ok) throw new Error("❌ Failed to fetch GitHub token from Drive");
+    // ✅ Step 1: Get GitHub token from Google Drive (via CORS proxy)
+    const proxyUrl = `https://corsproxy.io/?https://drive.google.com/uc?export=download&id=${TOKEN_FILE_ID}`;
+    const tokenRes = await fetch(proxyUrl);
+    if (!tokenRes.ok) throw new Error("❌ Failed to fetch token from Drive");
+    const githubToken = (await tokenRes.text()).trim();
 
-    let githubToken = await tokenRes.text();
-    githubToken = githubToken.trim().replace(/^"|"$/g, ''); // remove accidental quotes
+    // ✅ Step 2: Convert file to base64
+    const content = await file.arrayBuffer();
+    const base64Content = btoa(String.fromCharCode(...new Uint8Array(content)));
 
-    if (!githubToken.startsWith("ghp_") && !githubToken.startsWith("github_pat_")) {
-      throw new Error("❌ Invalid GitHub token format.");
-    }
-
-    // Step 2: Convert file to base64
-    const arrayBuffer = await file.arrayBuffer();
-    const base64Content = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-
-    // Step 3: Upload to GitHub
+    // ✅ Step 3: Upload to GitHub
     const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/uploads/${encodeURIComponent(file.name)}`;
-    const uploadRes = await fetch(apiUrl, {
+    const res = await fetch(apiUrl, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${githubToken}`,
@@ -45,12 +40,12 @@ async function uploadToGitHub() {
       })
     });
 
-    const result = await uploadRes.json();
-    if (!uploadRes.ok) {
+    const result = await res.json();
+    if (!res.ok) {
       throw new Error(result.message || "Upload failed");
     }
 
-    status.innerText = `✅ File uploaded to GitHub! SHA: ${result.content.sha}`;
+    status.innerText = `✅ File uploaded to GitHub!\nSHA: ${result.content.sha}`;
   } catch (err) {
     console.error(err);
     status.innerHTML = `❌ <b>Error:</b> ${err.message}`;
