@@ -1,4 +1,3 @@
-
 import pdfplumber
 import pandas as pd
 import re
@@ -17,16 +16,6 @@ folder_id = "1RgeXz5ubmZmI7ejjN5VJJv-Le7HnFy_y"
 creds_file_id = "1wp4xE4pzkjEGmYJpTxy3W39SetNyE9fo"
 creds_path = "creds.json"
 
-def download_creds():
-    print("📥 Downloading creds.json from Google Drive (public)...")
-    url = f"https://drive.google.com/uc?export=download&id={creds_file_id}"
-    r = requests.get(url)
-    if r.status_code != 200:
-        raise Exception(f"❌ Failed to download creds.json: {r.text}")
-    with open(creds_path, "wb") as f:
-        f.write(r.content)
-    print("✅ creds.json downloaded.")
-
 # === CATEGORY MAPPING ===
 category_keywords = {
     'Produce': ['SPINACH', 'GRAPES', 'MANDARINS', 'CARROT', 'ONION', 'MUSHROOMS', 'CELERY', 'CUKES', 'ROMAINE', 'POTATOES', 'HONYCRSP'],
@@ -38,6 +27,16 @@ category_keywords = {
     'Condiments': ['SALT', 'PEPPER', 'OIL', 'VINEGAR'],
 }
 
+def download_creds():
+    if os.path.exists(creds_path):
+        return
+    url = f"https://drive.google.com/uc?export=download&id={creds_file_id}"
+    res = requests.get(url)
+    if res.status_code != 200:
+        raise Exception("❌ Failed to download creds.json")
+    with open(creds_path, "wb") as f:
+        f.write(res.content)
+
 def categorize_item(name):
     name_upper = name.upper()
     for category, keywords in category_keywords.items():
@@ -45,7 +44,7 @@ def categorize_item(name):
             return category
     return 'Other'
 
-def export_to_google_sheet(df, sheet_name, creds_path):
+def export_to_google_sheet(df, sheet_name):
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/spreadsheets",
@@ -71,18 +70,19 @@ def export_to_google_sheet(df, sheet_name, creds_path):
     sheet.update([combined_df.columns.tolist()] + combined_df.values.tolist())
     print(f"✅ Appended {len(df)} new rows. Total rows in sheet: {len(combined_df)}")
 
-def get_all_costco_receipts(creds_path, folder_id):
+def get_all_costco_receipts():
     creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, ["https://www.googleapis.com/auth/drive"])
     service = build('drive', 'v3', credentials=creds)
     results = service.files().list(
         q=f"'{folder_id}' in parents and mimeType='application/pdf'",
         orderBy="modifiedTime desc",
-        pageSize=50,
+        pageSize=5,
         fields="files(id, name)"
     ).execute()
     items = results.get('files', [])
     if not items:
         raise FileNotFoundError("❌ No PDF files found in the specified Google Drive folder.")
+
     paths = []
     for item in items:
         file_id = item['id']
@@ -96,48 +96,47 @@ def get_all_costco_receipts(creds_path, folder_id):
         local_pdf_path = f"/tmp/{file_name}"
         with open(local_pdf_path, 'wb') as f:
             f.write(fh.getbuffer())
-        paths.append((file_name, local_pdf_path))
-    return paths
+        paths.append((file_name, local_pdf_path, file_id))
+    return paths, service
 
-if __name__ == "__main__":
+def run_parser():
     download_creds()
-
-    all_pdf_files = get_all_costco_receipts(creds_path, folder_id)
+    all_pdf_files, drive_service = get_all_costco_receipts()
     all_final_items = []
 
-    for file_name, pdf_path in all_pdf_files:
-        print(f"📄 Processing file: {file_name}")
+    for file_name, pdf_path, file_id in all_pdf_files:
+        print(f"📄 Processing: {file_name}")
         with pdfplumber.open(pdf_path) as pdf:
             all_lines = []
             for page in pdf.pages:
                 all_lines.extend(page.extract_text().split('\n'))
-        cleaned_lines = [line.strip().replace('\xa0', ' ').replace('  ', ' ') for line in all_lines if line.strip()]
+        cleaned = [line.strip().replace('\xa0', ' ').replace('  ', ' ') for line in all_lines if line.strip()]
         receipt_date = None
         final_items = []
         last_item = None
 
-        for line in cleaned_lines:
+        for line in cleaned:
             date_match = re.search(r'(\d{2}/\d{2}/\d{4})\s+\d{2}:\d{2}', line)
             if date_match:
                 receipt_date = datetime.strptime(date_match.group(1), '%m/%d/%Y').strftime('%Y-%m-%d')
                 break
 
         i = 0
-        while i < len(cleaned_lines):
-            current_line = cleaned_lines[i]
-            next_line = cleaned_lines[i + 1] if i + 1 < len(cleaned_lines) else ""
+        while i < len(cleaned):
+            curr = cleaned[i]
+            next_line = cleaned[i + 1] if i + 1 < len(cleaned) else ""
 
-            if re.match(r'^[A-Z ]{3,}$', current_line) and re.match(r'^(\d{5,})\s+([A-Z0-9]+)\s+(\d+\.\d{2})[NY]?', next_line):
+            if re.match(r'^[A-Z ]{3,}$', curr) and re.match(r'^(\d{5,})\s+([A-Z0-9]+)\s+(\d+\.\d{2})[NY]?', next_line):
                 match = re.match(r'^(\d{5,})\s+([A-Z0-9]+)\s+(\d+\.\d{2})', next_line)
                 item_id, name2, price = match.groups()
-                item_name = f"{current_line} {name2}"
+                item_name = f"{curr} {name2}"
                 cat = categorize_item(item_name)
                 final_items.append([receipt_date, item_id, item_name, cat, 1, float(price), float(price)])
                 last_item = {"id": item_id, "name": item_name}
                 i += 2
                 continue
 
-            match = re.match(r'^[EF]?\s*(\d{5,})\s+([A-Z0-9 /&-]+)\s+(\d+\.\d{2})\s*[NY]?$', current_line)
+            match = re.match(r'^[EF]?\s*(\d{5,})\s+([A-Z0-9 /&-]+)\s+(\d+\.\d{2})\s*[NY]?$', curr)
             if match:
                 item_id, item_name, price = match.groups()
                 cat = categorize_item(item_name)
@@ -146,7 +145,7 @@ if __name__ == "__main__":
                 i += 1
                 continue
 
-            discount_match = re.search(r'(\d+\.\d{2})-$', current_line)
+            discount_match = re.search(r'(\d+\.\d{2})-$', curr)
             if discount_match and last_item:
                 discount_amount = float(discount_match.group(1))
                 final_items.append([
@@ -163,19 +162,24 @@ if __name__ == "__main__":
 
             i += 1
 
-        for line in cleaned_lines:
+        for line in cleaned:
             tax_match = re.match(r'^TAX\s+(\d+\.\d{2})$', line)
             if tax_match:
                 tax_amount = float(tax_match.group(1))
                 final_items.append([receipt_date, "TAX", "Sales Tax", "Tax", 1, tax_amount, tax_amount])
                 break
 
-        print(f"✅ Parsed {len(final_items)} rows from {file_name}")
+        print(f"✅ Parsed {len(final_items)} items from {file_name}")
         all_final_items.extend(final_items)
+
+        # ✅ Optional delete from Drive
+        # print(f"🗑️ Deleting: {file_name}")
+        # drive_service.files().delete(fileId=file_id).execute()
 
     df = pd.DataFrame(all_final_items, columns=[
         "Date", "Item ID", "Item Name", "Category", "Quantity", "Unit Price", "Total Price"
     ])
+    export_to_google_sheet(df, google_sheet_name)
 
-    export_to_google_sheet(df, google_sheet_name, creds_path)
-    print(f"✅ Extracted {len(df)} rows from all receipts. Exported to Google Sheets.")
+if __name__ == "__main__":
+    run_parser()
