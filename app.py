@@ -18,30 +18,29 @@ def home():
     return render_template("index.html")
 
 @app.route("/upload", methods=["POST"])
-def upload_to_drive():
-    file = request.files['file']
-    if not file:
+def upload():
+    uploaded_file = request.files["file"]
+    if not uploaded_file:
         return "❌ No file received", 400
 
+    # Step 1: Download creds.json dynamically from public Google Drive
+    creds_url = "https://drive.google.com/uc?export=download&id=1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"
+    with open("creds.json", "wb") as f:
+        f.write(requests.get(creds_url).content)
+
+    # Step 2: Upload the PDF directly to Drive
     try:
-        creds = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES
-        )
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaIoBaseUpload
+        import io
+
+        creds = service_account.Credentials.from_service_account_file("creds.json", scopes=["https://www.googleapis.com/auth/drive"])
         drive_service = build("drive", "v3", credentials=creds)
 
-        filename = secure_filename(file.filename)
-        metadata = {
-            "name": filename,
-            "parents": [FOLDER_ID]
-        }
-
-        media = {
-            "name": filename,
-            "mimeType": "application/pdf",
-            "body": file.stream
-        }
-
-        drive_service.files().create(body=metadata, media_body=file.stream, fields="id").execute()
+        file_metadata = {"name": uploaded_file.filename, "parents": ["1RgeXz5ubmZmI7ejjN5VJJv-Le7HnFy_y"]}
+        media = MediaIoBaseUpload(uploaded_file.stream, mimetype="application/pdf", resumable=True)
+        drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
         return "✅ File uploaded to Google Drive!"
     except Exception as e:
         return f"❌ Error uploading to Drive: {e}", 500
