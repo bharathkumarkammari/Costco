@@ -1,20 +1,20 @@
-name: 🚀 Parse Costco Receipt
+name: 🚀 Run Costco Receipt Parser
 
 on:
   workflow_dispatch:
 
 jobs:
-  extract:
+  run-parser:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repository
+      - name: 🧾 Checkout repo
         uses: actions/checkout@v3
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.10"
 
       - name: 📦 Install dependencies
         run: |
@@ -22,22 +22,27 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
+      - name: 🔐 Download creds.json from Google Drive
+        run: curl -L "https://drive.google.com/uc?export=download&id=1wp4xE4pzkjEGmYJpTxy3W39SetNyE9fo" -o creds.json
+
       - name: 📤 Upload PDFs to Google Drive
         run: |
           source venv/bin/activate
           python upload_to_drive.py
 
-      - name: 💤 Wait for Google Drive sync
-        run: sleep 10
-
-      - name: 🧾 Run receipt extractor
+      - name: 🧠 Run extractor script
         run: |
           source venv/bin/activate
           python extractor.py
 
       - name: 🧹 Delete uploaded PDFs from GitHub
-        run: |
-          source venv/bin/activate
-          python cleanup_github_uploads.py
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          FILES=$(gh api repos/${{ github.repository }}/contents/uploads --jq '.[].name')
+          for file in $FILES; do
+            SHA=$(gh api repos/${{ github.repository }}/contents/uploads/$file --jq '.sha')
+            gh api repos/${{ github.repository }}/contents/uploads/$file \
+              -X DELETE -f sha=$SHA \
+              -F message="🧹 Delete uploaded $file after processing"
+          done
