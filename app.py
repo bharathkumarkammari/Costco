@@ -35,3 +35,27 @@ def upload():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Railway sets this
     app.run(host="0.0.0.0", port=port, debug=False)
+    
+@app.route("/run-extraction", methods=["POST"])
+def trigger_extraction():
+    try:
+        token = os.environ["GITHUB_TOKEN"]
+        repo = os.environ.get("GITHUB_REPO", "bharathkumarkammari/Costco")
+        workflow_file = "run_parser.yml"
+        ref = "main"
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json"
+        }
+
+        trigger_url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_file}/dispatches"
+
+        res = requests.post(trigger_url, headers=headers, json={"ref": ref})
+
+        if res.status_code == 204:
+            return "GitHub Action triggered!"
+        else:
+            return f"GitHub API Error: {res.status_code} – {res.text}", 400
+    except Exception as e:
+        return f"Server Error: {str(e)}", 500

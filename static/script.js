@@ -21,3 +21,20 @@ async function uploadFile() {
     status.innerText = "❌ Upload failed.";
   }
 }
+async function runExtraction() {
+  const runStatus = document.getElementById("runStatus");
+  runStatus.innerText = "⏳ Triggering extraction workflow...";
+
+  try {
+    const res = await fetch("/run-extraction", { method: "POST" });
+    const text = await res.text();
+
+    if (res.ok) {
+      runStatus.innerText = `✅ ${text}`;
+    } else {
+      runStatus.innerHTML = `❌ <b>Error:</b> ${text}`;
+    }
+  } catch (err) {
+    runStatus.innerHTML = `❌ <b>Error:</b> ${err.message}`;
+  }
+}
