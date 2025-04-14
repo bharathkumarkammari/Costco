@@ -1,4 +1,4 @@
-name: 🚀 Run Costco Receipt Parser
+name: 🚀 Parse Costco Receipt
 
 on:
   workflow_dispatch:
@@ -8,13 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧾 Checkout repository
+      - name: 📥 Checkout repository
         uses: actions/checkout@v3
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.10"
 
       - name: 📦 Install dependencies
         run: |
@@ -22,28 +22,22 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: 📥 Run extractor.py
+      - name: 📤 Upload PDFs to Google Drive
+        run: |
+          source venv/bin/activate
+          python upload_to_drive.py
+
+      - name: 💤 Wait for Google Drive sync
+        run: sleep 10
+
+      - name: 🧾 Run receipt extractor
         run: |
           source venv/bin/activate
           python extractor.py
 
-      - name: 🧹 Delete processed PDFs from GitHub
+      - name: 🧹 Delete uploaded PDFs from GitHub
         run: |
-          echo "Cleaning up GitHub uploads folder..."
-          for file in $(ls uploads/*.pdf 2>/dev/null); do
-            filename=$(basename $file)
-            sha=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              https://api.github.com/repos/${{ github.repository }}/contents/uploads/$filename \
-              | jq -r .sha)
-
-            if [[ "$sha" != "null" ]]; then
-              curl -s -X DELETE \
-                -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                -H "Accept: application/vnd.github+json" \
-                https://api.github.com/repos/${{ github.repository }}/contents/uploads/$filename \
-                -d "{\"message\": \"🗑️ Delete processed file: $filename\", \"sha\": \"$sha\"}"
-              echo "✅ Deleted: $filename"
-            else
-              echo "⚠️ File not found or already deleted: $filename"
-            fi
-          done
+          source venv/bin/activate
+          python cleanup_github_uploads.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
