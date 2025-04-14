@@ -1,7 +1,6 @@
 from flask import Flask, request, render_template
 import os
 import base64
-from github import Github
 import requests
 
 app = Flask(__name__)
@@ -16,23 +15,36 @@ def upload():
     if not uploaded_file:
         return "❌ No file received", 400
 
-    # GitHub token from Railway environment variable
     github_token = os.getenv("GITHUB_TOKEN")
     if not github_token:
         return "❌ Missing GitHub token", 500
 
-    g = Github(github_token)
-    repo = g.get_user().get_repo("Costco")
-    path = f"uploads/{uploaded_file.filename}"
-    content = uploaded_file.read()
-    encoded_content = base64.b64encode(content).decode("utf-8")
+    # Read PDF as binary and base64 encode it
+    content = base64.b64encode(uploaded_file.read()).decode("utf-8")
 
-    try:
-        repo.create_file(path=path, message="📄 Upload receipt", content=encoded_content, branch="main")
+    # Upload to GitHub via REST API instead of PyGithub (safer for binary files)
+    repo = "bharathkumarkammari/Costco"
+    path = f"uploads/{uploaded_file.filename}"
+
+    response = requests.put(
+        f"https://api.github.com/repos/{repo}/contents/{path}",
+        headers={
+            "Authorization": f"Bearer {github_token}",
+            "Accept": "application/vnd.github+json"
+        },
+        json={
+            "message": f"📄 Upload {uploaded_file.filename}",
+            "content": content,
+            "branch": "main"
+        }
+    )
+
+    if response.ok:
         return "✅ File uploaded to GitHub!"
-    except Exception as e:
-        return f"❌ Upload failed: {e}", 500
-        
+    else:
+        return f"❌ Upload failed: {response.status_code} - {response.text}", 500
+
+
 @app.route("/run-extraction", methods=["POST"])
 def run_extraction():
     try:
@@ -56,7 +68,7 @@ def run_extraction():
     except Exception as e:
         return f"❌ Error: {str(e)}", 500
 
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Railway sets this
     app.run(host="0.0.0.0", port=port, debug=False)
-    
