@@ -34,21 +34,3 @@ jobs:
         run: |
           source venv/bin/activate
           python extractor.py
-
-      - name: 🧹 Delete uploaded PDFs from GitHub
-        env:
-          GH_REPO: ${{ github.repository }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "🔍 Finding uploaded PDFs to delete..."
-          curl -s -H "Authorization: token $GH_TOKEN" \
-            https://api.github.com/repos/$GH_REPO/contents/uploads \
-            | jq -r '.[] | select(.type == "file") | .name + "," + .sha' > files_to_delete.txt
-
-          while IFS=, read -r filename sha; do
-            echo "🧹 Deleting $filename"
-            curl -s -X DELETE -H "Authorization: token $GH_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{\"message\": \"🧹 Delete $filename after processing\", \"sha\": \"$sha\"}" \
-              https://api.github.com/repos/$GH_REPO/contents/uploads/$filename
-          done < files_to_delete.txt
