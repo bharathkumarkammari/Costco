@@ -24,7 +24,7 @@ def upload():
         return "❌ No file received", 400
 
     # Step 1: Download creds.json dynamically from public Google Drive
-    creds_url = "https://drive.google.com/uc?export=download&id=1z4uVLj35r6K6ux9z4c5j8hjnIcva0Mow"
+    creds_url = "https://drive.google.com/uc?export=download&id=1wp4xE4pzkjEGmYJpTxy3W39SetNyE9fo"
     with open("creds.json", "wb") as f:
         f.write(requests.get(creds_url).content)
 
