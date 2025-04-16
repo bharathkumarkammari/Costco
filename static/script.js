@@ -5,6 +5,7 @@ async function uploadFile() {
     status.innerText = "⚠️ No file selected.";
     return;
   }
+
   status.innerText = "📤 Uploading...";
 
   const formData = new FormData();
@@ -21,20 +22,28 @@ async function uploadFile() {
     status.innerText = "❌ Upload failed.";
   }
 }
+
 async function runExtraction() {
-  const runStatus = document.getElementById("runStatus");
-  runStatus.innerText = "⏳ Triggering extraction workflow...";
+  const status = document.getElementById("status");
+  status.innerText = "⏳ Triggering extraction...";
 
   try {
     const res = await fetch("/run-extraction", { method: "POST" });
-    const text = await res.text();
+    const msg = await res.text();
 
     if (res.ok) {
-      runStatus.innerText = `✅ ${text}`;
+      status.innerText = `✅ ${msg}`;
     } else {
-      runStatus.innerHTML = `❌ <b>Error:</b> ${text}`;
+      status.innerText = `❌ Error: ${msg}`;
     }
   } catch (err) {
-    runStatus.innerHTML = `❌ <b>Error:</b> ${err.message}`;
+    status.innerText = `❌ Error: ${err.message}`;
   }
+}
+
+function refreshTableau() {
+  const status = document.getElementById("status");
+  const frame = document.getElementById("tableauFrame");
+  frame.src = frame.src;  // Force reload
+  status.innerText = "🔄 Dashboard refreshed with latest data.";
 }
