@@ -2,9 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Costco Receipt Parser</title>
-  <link rel="stylesheet" href="/static/style.css" />
+  <title>Costco Receipt Parser (Local Test)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f8f8f8;
+      padding: 20px;
+      margin: 0;
+    }
+
+    .container {
+      text-align: center;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: auto;
+    }
+
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+
+    button {
+      margin: 8px;
+      padding: 10px 16px;
+      font-size: 14px;
+      background-color: #007bfc;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #005dc1;
+    }
+
+    #status {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .tableau-container {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+      border-radius: 10px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -16,19 +69,64 @@
     <p id="status">🕓 Waiting for action...</p>
   </div>
 
-  <!-- ✅ Tableau Dashboard Embed -->
   <div class="tableau-container">
-    <iframe 
+    <iframe
       id="tableauFrame"
       src="https://public.tableau.com/views/Costco_17441537491340/Dashboard1?:embed=y&:display_count=yes"
-      width="100%" 
-      height="600" 
-      frameborder="0" 
-      style="max-width: 1200px; border: none; border-radius: 10px;"
       allowfullscreen
     ></iframe>
   </div>
 
-  <script src="/static/script.js"></script>
+  <script>
+    async function uploadFile() {
+      const file = document.getElementById("fileInput").files[0];
+      const status = document.getElementById("status");
+      if (!file) {
+        status.innerText = "⚠️ No file selected.";
+        return;
+      }
+
+      status.innerText = "📤 Uploading...";
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const msg = await res.text();
+        status.innerText = msg;
+      } catch (err) {
+        status.innerText = "❌ Upload failed.";
+      }
+    }
+
+    async function runExtraction() {
+      const status = document.getElementById("status");
+      status.innerText = "⏳ Triggering extraction...";
+
+      try {
+        const res = await fetch("/run-extraction", { method: "POST" });
+        const msg = await res.text();
+
+        if (res.ok) {
+          status.innerText = `✅ ${msg}`;
+        } else {
+          status.innerText = `❌ Error: ${msg}`;
+        }
+      } catch (err) {
+        status.innerText = `❌ Error: ${err.message}`;
+      }
+    }
+
+    function refreshTableau() {
+      const status = document.getElementById("status");
+      const frame = document.getElementById("tableauFrame");
+      frame.src = frame.src; // Reload iframe
+      status.innerText = "🔄 Dashboard refreshed.";
+    }
+  </script>
 </body>
 </html>
