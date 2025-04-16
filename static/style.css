@@ -39,14 +39,6 @@ button:hover {
 }
 
 .tableau-container {
-  margin-top: 20px;
-  width: 100%;
+  margin-top: 30px;
   text-align: center;
-}
-
-iframe {
-  width: 100%;
-  max-width: 100%;
-  height: auto;
-  aspect-ratio: 16/9;
 }

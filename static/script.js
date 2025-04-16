@@ -44,6 +44,6 @@ async function runExtraction() {
 function refreshTableau() {
   const status = document.getElementById("status");
   const frame = document.getElementById("tableauFrame");
-  frame.src = frame.src;  // Force reload
+  frame.src = frame.src;  // Reload the iframe
   status.innerText = "🔄 Dashboard refreshed with latest data.";
 }
