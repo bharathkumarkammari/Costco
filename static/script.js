@@ -80,17 +80,10 @@ async function refreshTableau() {
   refreshButton.disabled = true;
 
   try {
-    // Force refresh by adding a cache-busting parameter
-    const currentUrl = viz.getUrl();
-    const cacheBustUrl = currentUrl.includes("?") 
-      ? `${currentUrl}&:refresh=true`
-      : `${currentUrl}?:refresh=true`;
-    viz.setUrl(cacheBustUrl);
-    
     await viz.refreshDataAsync();
     status.innerText = "✅ Dashboard refreshed with latest data.";
   } catch (err) {
-    status.innerText = `❌ Failed to refresh dashboard: ${err.message}`;
+    status.innerText = `❌ Failed to refresh dashboard: ${err.message}. Ensure the Google Sheet is accessible and try again.`;
   } finally {
     refreshButton.disabled = false;
   }
