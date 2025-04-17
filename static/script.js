@@ -1,4 +1,5 @@
 let viz; // Tableau Viz object
+let isVizLoaded = false; // Track if viz is fully loaded
 
 function initViz() {
   const containerDiv = document.getElementById("vizContainer");
@@ -6,11 +7,21 @@ function initViz() {
 
   const options = {
     hideTabs: true,
+    hideToolbar: true,
     width: "100%",
     height: "800px",
+    onFirstInteractive: () => {
+      isVizLoaded = true;
+      document.getElementById("status").innerText = "✅ Dashboard loaded.";
+      document.getElementById("refreshButton").disabled = false;
+    }
   };
 
-  viz = new tableau.Viz(containerDiv, url, options);
+  try {
+    viz = new tableau.Viz(containerDiv, url, options);
+  } catch (err) {
+    document.getElementById("status").innerText = `❌ Failed to load dashboard: ${err.message}`;
+  }
 }
 
 async function uploadFile() {
@@ -34,7 +45,7 @@ async function uploadFile() {
     const msg = await res.text();
     status.innerText = msg;
   } catch (err) {
-    status.innerText = "❌ Upload failed.";
+    status.innerText = `❌ Upload failed: ${err.message}`;
   }
 }
 
@@ -56,17 +67,36 @@ async function runExtraction() {
   }
 }
 
-function refreshTableau() {
+async function refreshTableau() {
   const status = document.getElementById("status");
-  if (viz) {
-    viz.refreshDataAsync().then(() => {
-      status.innerText = "🔄 Dashboard refreshed with latest data.";
-    }).catch(err => {
-      status.innerText = `❌ Failed to refresh dashboard: ${err.message}`;
-    });
-  } else {
-    status.innerText = "⚠️ Tableau Viz not initialized.";
+  const refreshButton = document.getElementById("refreshButton");
+
+  if (!viz || !isVizLoaded) {
+    status.innerText = "⚠️ Dashboard not yet loaded. Please wait.";
+    return;
+  }
+
+  status.innerText = "🔄 Refreshing dashboard...";
+  refreshButton.disabled = true;
+
+  try {
+    // Force refresh by adding a cache-busting parameter
+    const currentUrl = viz.getUrl();
+    const cacheBustUrl = currentUrl.includes("?") 
+      ? `${currentUrl}&:refresh=true`
+      : `${currentUrl}?:refresh=true`;
+    viz.setUrl(cacheBustUrl);
+    
+    await viz.refreshDataAsync();
+    status.innerText = "✅ Dashboard refreshed with latest data.";
+  } catch (err) {
+    status.innerText = `❌ Failed to refresh dashboard: ${err.message}`;
+  } finally {
+    refreshButton.disabled = false;
   }
 }
 
-document.addEventListener("DOMContentLoaded", initViz);
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("refreshButton").disabled = true; // Disable refresh until viz loads
+  initViz();
+});
