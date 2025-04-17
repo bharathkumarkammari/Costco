@@ -80,11 +80,29 @@ async function refreshTableau() {
   refreshButton.disabled = true;
 
   try {
+    // Try refreshDataAsync first
     await viz.refreshDataAsync();
-    status.innerText = "✅ Dashboard refreshed with latest data.";
+    
+    // If data doesn't update, dispose and reload with cache-busting parameter
+    viz.dispose();
+    isVizLoaded = false;
+    const containerDiv = document.getElementById("vizContainer");
+    const baseUrl = "https://public.tableau.com/views/Costco_17441537491340/Dashboard1";
+    const cacheBustUrl = `${baseUrl}?:refresh=true&cacheBust=${Date.now()}`;
+    const options = {
+      hideTabs: true,
+      hideToolbar: true,
+      width: "100%",
+      height: "800px",
+      onFirstInteractive: () => {
+        isVizLoaded = true;
+        status.innerText = "✅ Dashboard refreshed with latest data.";
+        refreshButton.disabled = false;
+      }
+    };
+    viz = new tableau.Viz(containerDiv, cacheBustUrl, options);
   } catch (err) {
     status.innerText = `❌ Failed to refresh dashboard: ${err.message}. Ensure the Google Sheet is accessible and try again.`;
-  } finally {
     refreshButton.disabled = false;
   }
 }
