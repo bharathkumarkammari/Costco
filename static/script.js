@@ -1,3 +1,18 @@
+let viz; // Tableau Viz object
+
+function initViz() {
+  const containerDiv = document.getElementById("vizContainer");
+  const url = "https://public.tableau.com/views/Costco_17441537491340/Dashboard1";
+
+  const options = {
+    hideTabs: true,
+    width: "100%",
+    height: "800px",
+  };
+
+  viz = new tableau.Viz(containerDiv, url, options);
+}
+
 async function uploadFile() {
   const file = document.getElementById("fileInput").files[0];
   const status = document.getElementById("status");
@@ -43,7 +58,15 @@ async function runExtraction() {
 
 function refreshTableau() {
   const status = document.getElementById("status");
-  const frame = document.getElementById("tableauFrame");
-  frame.src = frame.src;  // Reload the iframe
-  status.innerText = "🔄 Dashboard refreshed with latest data.";
+  if (viz) {
+    viz.refreshDataAsync().then(() => {
+      status.innerText = "🔄 Dashboard refreshed with latest data.";
+    }).catch(err => {
+      status.innerText = `❌ Failed to refresh dashboard: ${err.message}`;
+    });
+  } else {
+    status.innerText = "⚠️ Tableau Viz not initialized.";
+  }
 }
+
+document.addEventListener("DOMContentLoaded", initViz);
